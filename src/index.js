@@ -6,21 +6,26 @@ const authRoutes = require('./routes/authRoutes');
 const taskRoutes = require('./routes/taskRoutes');
 
 const app = express();
-const PORT = process.env.PORT;
 
+// ✅ FIX: Use fallback port
+const PORT = process.env.PORT || 5000;
+
+// ✅ CORS setup
 app.use(
   cors({
     origin: ['http://localhost:3000', 'http://127.0.0.1:3000'],
     credentials: true,
   })
 );
+
 app.use(express.json());
 
+// ✅ Health check route (important for Render)
 app.get('/api/health', (req, res) => {
   res.json({ ok: true });
 });
 
-// Helpful when you open http://localhost:5000/api in the browser
+// ✅ Root API route
 app.get('/api', (req, res) => {
   res.json({
     name: 'todo-backend',
@@ -35,30 +40,49 @@ app.get('/api', (req, res) => {
   });
 });
 
+// ✅ Routes
 app.use('/api/auth', authRoutes);
 app.use('/api/tasks', taskRoutes);
 
+// ✅ 404 handler
 app.use((req, res) => {
   res.status(404).json({ message: 'Not found' });
 });
 
+// ✅ Start server
 async function start() {
-  if (!process.env.JWT_SECRET) {
-    console.error('JWT_SECRET is missing. Copy .env.example to .env and set JWT_SECRET.');
+  try {
+    // 🔐 Check JWT
+    if (!process.env.JWT_SECRET) {
+      console.error('JWT_SECRET is missing.');
+      process.exit(1);
+    }
+
+    // 🗄️ Check Mongo URI
+    const uri = process.env.MONGODB_URI;
+    if (!uri) {
+      console.error('MONGODB_URI is missing.');
+      process.exit(1);
+    }
+
+    // ✅ Connect DB
+    await connectDB(uri);
+    console.log('MongoDB Connected ✅');
+
+    // ✅ FIX: Bind to 0.0.0.0 for Render
+    app.listen(PORT, '0.0.0.0', () => {
+      console.log(`Server running on port ${PORT} 🚀`);
+    });
+
+  } catch (error) {
+    console.error('Startup Error:', error);
     process.exit(1);
   }
-  const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017/todoBE';
-  await connectDB(uri);
-  app.listen(PORT, () => {
-    console.log(`Server listening on http://localhost:${PORT}`);
-  });
 }
 
+// ✅ Run server
 if (require.main === module) {
-  start().catch((err) => {
-    console.error(err);
-    process.exit(1);
-  });
+  start();
 }
 
 module.exports = { app, start };
