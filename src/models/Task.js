@@ -14,6 +14,12 @@ const taskSchema = new mongoose.Schema(
       enum: ['low', 'medium', 'high'],
       default: 'medium',
     },
+    category: {
+      type: String,
+      enum: ['work', 'personal', 'study'],
+      default: 'work',
+    },
+    deadline: { type: Date, default: null },
     user: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   },
   { timestamps: true }
