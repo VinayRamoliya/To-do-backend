@@ -1,17 +1,31 @@
 {
   "name": "todo-backend",
   "version": "1.0.0",
-  "main": "index.js",
+  "description": "Express + MongoDB task API with JWT auth",
+  "main": "src/index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/index.js",
+    "dev": "nodemon src/index.js",
+    "lint": "eslint \"src/**/*.js\"",
+    "test": "cross-env NODE_ENV=test jest --runInBand --forceExit"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
-  "description": "",
   "dependencies": {
-    "cors": "^2.8.6",
-    "express": "^5.2.1",
-    "nodemon": "^3.1.14"
+    "bcryptjs": "^2.4.3",
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "jsonwebtoken": "^9.0.2",
+    "mongoose": "^8.9.3"
+  },
+  "devDependencies": {
+    "cross-env": "^7.0.3",
+    "eslint": "^8.57.1",
+    "jest": "^29.7.0",
+    "mongodb-memory-server": "^10.1.2",
+    "nodemon": "^3.1.9",
+    "supertest": "^7.0.0"
   }
 }
