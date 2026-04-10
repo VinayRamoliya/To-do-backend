@@ -46,22 +46,28 @@ app.use((req, res) => {
 // ✅ Start server
 async function start() {
   try {
+    const skipDb = process.env.SKIP_DB === 'true';
+
     // 🔐 Check JWT
     if (!process.env.JWT_SECRET) {
       console.error('JWT_SECRET is missing.');
       process.exit(1);
     }
 
-    // 🗄️ Check Mongo URI
-    const uri = process.env.MONGODB_URI;
-    if (!uri) {
-      console.error('MONGODB_URI is missing.');
-      process.exit(1);
-    }
+    if (!skipDb) {
+      // 🗄️ Check Mongo URI
+      const uri = process.env.MONGODB_URI;
+      if (!uri) {
+        console.error('MONGODB_URI is missing.');
+        process.exit(1);
+      }
 
-    // ✅ Connect DB
-    await connectDB(uri);
-    console.log('MongoDB Connected ✅');
+      // ✅ Connect DB
+      await connectDB(uri);
+      console.log('MongoDB Connected ✅');
+    } else {
+      console.log('Skipping DB connection (SKIP_DB=true)');
+    }
 
     // ✅ FIX: Bind to 0.0.0.0 for Render
     app.listen(PORT, '0.0.0.0', () => {
