@@ -53,6 +53,49 @@ async function getTasks(req, res) {
   }
 }
 
+async function getTaskSummary(req, res) {
+  try {
+    const tasks = await Task.find({ user: req.userId }).select('status category deadline');
+    const now = new Date();
+
+    const summary = {
+      total: tasks.length,
+      pending: 0,
+      completed: 0,
+      overdue: 0,
+      categories: {
+        work: 0,
+        personal: 0,
+        study: 0,
+      },
+    };
+
+    tasks.forEach((task) => {
+      if (task.status === 'completed') {
+        summary.completed += 1;
+      } else {
+        summary.pending += 1;
+      }
+
+      if (
+        task.status !== 'completed' &&
+        task.deadline &&
+        new Date(task.deadline).getTime() < now.getTime()
+      ) {
+        summary.overdue += 1;
+      }
+
+      if (task.category && summary.categories[task.category] !== undefined) {
+        summary.categories[task.category] += 1;
+      }
+    });
+
+    return res.json(summary);
+  } catch (err) {
+    return res.status(500).json({ message: 'Server error', error: err.message });
+  }
+}
+
 async function deleteTask(req, res) {
   try {
     const task = await Task.findOneAndDelete({
@@ -63,6 +106,15 @@ async function deleteTask(req, res) {
       return res.status(404).json({ message: 'Task not found' });
     }
     return res.json({ message: 'Task deleted', id: task._id });
+  } catch (err) {
+    return res.status(500).json({ message: 'Server error', error: err.message });
+  }
+}
+
+async function clearCompletedTasks(req, res) {
+  try {
+    const result = await Task.deleteMany({ user: req.userId, status: 'completed' });
+    return res.json({ message: 'Completed tasks removed', deletedCount: result.deletedCount || 0 });
   } catch (err) {
     return res.status(500).json({ message: 'Server error', error: err.message });
   }
@@ -103,4 +155,11 @@ async function updateTask(req, res) {
   }
 }
 
-module.exports = { createTask, getTasks, deleteTask, updateTask };
+module.exports = {
+  createTask,
+  getTasks,
+  getTaskSummary,
+  deleteTask,
+  clearCompletedTasks,
+  updateTask,
+};
