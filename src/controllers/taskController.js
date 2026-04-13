@@ -99,6 +99,13 @@ async function getTaskSummary(req, res) {
 
 async function deleteTask(req, res) {
   try {
+    // Defensive fallback: if a route mismatch sends "/completed" here,
+    // handle it exactly like clearCompletedTasks instead of throwing CastError.
+    if (req.params.id === 'completed') {
+      const result = await Task.deleteMany({ user: req.userId, status: 'completed' });
+      return res.json({ message: 'Completed tasks removed', deletedCount: result.deletedCount || 0 });
+    }
+
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
       return res.status(400).json({ message: 'Invalid task id' });
     }
