@@ -1,4 +1,5 @@
 const Task = require('../models/Task');
+const mongoose = require('mongoose');
 
 async function createTask(req, res) {
   try {
@@ -98,6 +99,9 @@ async function getTaskSummary(req, res) {
 
 async function deleteTask(req, res) {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid task id' });
+    }
     const task = await Task.findOneAndDelete({
       _id: req.params.id,
       user: req.userId,
@@ -122,6 +126,9 @@ async function clearCompletedTasks(req, res) {
 
 async function updateTask(req, res) {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid task id' });
+    }
     const { status, title, description, priority, category, deadline } = req.body;
     const updates = {};
     if (title !== undefined) updates.title = title;
