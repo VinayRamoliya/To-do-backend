@@ -2,15 +2,23 @@ const Task = require('../models/Task');
 
 async function createTask(req, res) {
   try {
-    const { title, description, priority, status } = req.body;
+    const { title, description, priority, status, category, deadline } = req.body;
     if (!title || String(title).trim() === '') {
       return res.status(400).json({ message: 'Title is required' });
     }
+
+    const parsedDeadline = deadline ? new Date(deadline) : null;
+    if (deadline && Number.isNaN(parsedDeadline.getTime())) {
+      return res.status(400).json({ message: 'Invalid deadline date' });
+    }
+
     const task = await Task.create({
       title: title.trim(),
       description: description != null ? String(description) : '',
       priority: priority || 'medium',
       status: status || 'pending',
+      category: category || 'work',
+      deadline: parsedDeadline,
       user: req.userId,
     });
     return res.status(201).json(task);
@@ -21,8 +29,68 @@ async function createTask(req, res) {
 
 async function getTasks(req, res) {
   try {
-    const tasks = await Task.find({ user: req.userId }).sort({ createdAt: -1 });
+    const { status, category, search } = req.query;
+    const query = { user: req.userId };
+
+    if (status && status !== 'all') {
+      query.status = status;
+    }
+    if (category && category !== 'all') {
+      query.category = category;
+    }
+    if (search && String(search).trim()) {
+      const s = String(search).trim();
+      query.$or = [
+        { title: { $regex: s, $options: 'i' } },
+        { description: { $regex: s, $options: 'i' } },
+      ];
+    }
+
+    const tasks = await Task.find(query).sort({ createdAt: -1 });
     return res.json(tasks);
+  } catch (err) {
+    return res.status(500).json({ message: 'Server error', error: err.message });
+  }
+}
+
+async function getTaskSummary(req, res) {
+  try {
+    const tasks = await Task.find({ user: req.userId }).select('status category deadline');
+    const now = new Date();
+
+    const summary = {
+      total: tasks.length,
+      pending: 0,
+      completed: 0,
+      overdue: 0,
+      categories: {
+        work: 0,
+        personal: 0,
+        study: 0,
+      },
+    };
+
+    tasks.forEach((task) => {
+      if (task.status === 'completed') {
+        summary.completed += 1;
+      } else {
+        summary.pending += 1;
+      }
+
+      if (
+        task.status !== 'completed' &&
+        task.deadline &&
+        new Date(task.deadline).getTime() < now.getTime()
+      ) {
+        summary.overdue += 1;
+      }
+
+      if (task.category && summary.categories[task.category] !== undefined) {
+        summary.categories[task.category] += 1;
+      }
+    });
+
+    return res.json(summary);
   } catch (err) {
     return res.status(500).json({ message: 'Server error', error: err.message });
   }
@@ -43,14 +111,35 @@ async function deleteTask(req, res) {
   }
 }
 
+async function clearCompletedTasks(req, res) {
+  try {
+    const result = await Task.deleteMany({ user: req.userId, status: 'completed' });
+    return res.json({ message: 'Completed tasks removed', deletedCount: result.deletedCount || 0 });
+  } catch (err) {
+    return res.status(500).json({ message: 'Server error', error: err.message });
+  }
+}
+
 async function updateTask(req, res) {
   try {
-    const { status, title, description, priority } = req.body;
+    const { status, title, description, priority, category, deadline } = req.body;
     const updates = {};
     if (title !== undefined) updates.title = title;
     if (description !== undefined) updates.description = description;
     if (priority !== undefined) updates.priority = priority;
     if (status !== undefined) updates.status = status;
+    if (category !== undefined) updates.category = category;
+    if (deadline !== undefined) {
+      if (!deadline) {
+        updates.deadline = null;
+      } else {
+        const parsedDeadline = new Date(deadline);
+        if (Number.isNaN(parsedDeadline.getTime())) {
+          return res.status(400).json({ message: 'Invalid deadline date' });
+        }
+        updates.deadline = parsedDeadline;
+      }
+    }
 
     const task = await Task.findOneAndUpdate(
       { _id: req.params.id, user: req.userId },
@@ -66,4 +155,11 @@ async function updateTask(req, res) {
   }
 }
 
-module.exports = { createTask, getTasks, deleteTask, updateTask };
+module.exports = {
+  createTask,
+  getTasks,
+  getTaskSummary,
+  deleteTask,
+  clearCompletedTasks,
+  updateTask,
+};
