@@ -17,7 +17,7 @@ router.post('/', createTask);
 router.get('/summary', getTaskSummary);
 router.get('/', getTasks);
 router.delete('/completed', clearCompletedTasks);
-router.delete('/:id', deleteTask);
-router.patch('/:id', updateTask);
+router.delete('/:id([0-9a-fA-F]{24})', deleteTask);
+router.patch('/:id([0-9a-fA-F]{24})', updateTask);
 
 module.exports = router;
