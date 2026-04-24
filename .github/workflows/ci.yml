@@ -1,0 +1,50 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - develop
+      - dev-vinay
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 18
+        uses: actions/setup-node@v4
+        with:
+          node-version: 18
+
+      - name: Install backend dependencies
+        run: npm install
+
+      - name: Run backend tests
+        run: npm test
+
+      - name: Install frontend dependencies (if frontend exists)
+        shell: bash
+        run: |
+          if [ -d frontend ]; then
+            cd frontend
+            npm install
+          else
+            echo "No frontend directory found. Skipping frontend install."
+          fi
+
+      - name: Build frontend (if frontend exists)
+        shell: bash
+        run: |
+          if [ -d frontend ]; then
+            cd frontend
+            npm run build
+          else
+            echo "No frontend directory found. Skipping frontend build."
+          fi
