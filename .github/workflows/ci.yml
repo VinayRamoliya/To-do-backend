@@ -16,10 +16,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Setup Node.js 18
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           node-version: 18
 
@@ -29,22 +29,12 @@ jobs:
       - name: Run backend tests
         run: npm test
 
-      - name: Install frontend dependencies (if frontend exists)
-        shell: bash
-        run: |
-          if [ -d frontend ]; then
-            cd frontend
-            npm install
-          else
-            echo "No frontend directory found. Skipping frontend install."
-          fi
+      - name: Install frontend dependencies
+        if: ${{ hashFiles('frontend/package.json') != '' }}
+        working-directory: frontend
+        run: npm install
 
-      - name: Build frontend (if frontend exists)
-        shell: bash
-        run: |
-          if [ -d frontend ]; then
-            cd frontend
-            npm run build
-          else
-            echo "No frontend directory found. Skipping frontend build."
-          fi
+      - name: Build frontend
+        if: ${{ hashFiles('frontend/package.json') != '' }}
+        working-directory: frontend
+        run: npm run build
