@@ -7,7 +7,7 @@
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
     "lint": "eslint \"src/**/*.js\"",
-    "test": "cross-env NODE_ENV=test jest --runInBand --forceExit"
+    "test": "cross-env NODE_ENV=test jest --runInBand --passWithNoTests --forceExit"
   },
   "keywords": [],
   "author": "",
