@@ -1,4 +1,5 @@
 const Task = require('../models/Task');
+const mongoose = require('mongoose');
 
 async function createTask(req, res) {
   try {
@@ -53,8 +54,61 @@ async function getTasks(req, res) {
   }
 }
 
+async function getTaskSummary(req, res) {
+  try {
+    const tasks = await Task.find({ user: req.userId }).select('status category deadline');
+    const now = new Date();
+
+    const summary = {
+      total: tasks.length,
+      pending: 0,
+      completed: 0,
+      overdue: 0,
+      categories: {
+        work: 0,
+        personal: 0,
+        study: 0,
+      },
+    };
+
+    tasks.forEach((task) => {
+      if (task.status === 'completed') {
+        summary.completed += 1;
+      } else {
+        summary.pending += 1;
+      }
+
+      if (
+        task.status !== 'completed' &&
+        task.deadline &&
+        new Date(task.deadline).getTime() < now.getTime()
+      ) {
+        summary.overdue += 1;
+      }
+
+      if (task.category && summary.categories[task.category] !== undefined) {
+        summary.categories[task.category] += 1;
+      }
+    });
+
+    return res.json(summary);
+  } catch (err) {
+    return res.status(500).json({ message: 'Server error', error: err.message });
+  }
+}
+
 async function deleteTask(req, res) {
   try {
+    // Defensive fallback: if a route mismatch sends "/completed" here,
+    // handle it exactly like clearCompletedTasks instead of throwing CastError.
+    if (req.params.id === 'completed') {
+      const result = await Task.deleteMany({ user: req.userId, status: 'completed' });
+      return res.json({ message: 'Completed tasks removed', deletedCount: result.deletedCount || 0 });
+    }
+
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid task id' });
+    }
     const task = await Task.findOneAndDelete({
       _id: req.params.id,
       user: req.userId,
@@ -68,8 +122,20 @@ async function deleteTask(req, res) {
   }
 }
 
+async function clearCompletedTasks(req, res) {
+  try {
+    const result = await Task.deleteMany({ user: req.userId, status: 'completed' });
+    return res.json({ message: 'Completed tasks removed', deletedCount: result.deletedCount || 0 });
+  } catch (err) {
+    return res.status(500).json({ message: 'Server error', error: err.message });
+  }
+}
+
 async function updateTask(req, res) {
   try {
+    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+      return res.status(400).json({ message: 'Invalid task id' });
+    }
     const { status, title, description, priority, category, deadline } = req.body;
     const updates = {};
     if (title !== undefined) updates.title = title;
@@ -103,4 +169,11 @@ async function updateTask(req, res) {
   }
 }
 
-module.exports = { createTask, getTasks, deleteTask, updateTask };
+module.exports = {
+  createTask,
+  getTasks,
+  getTaskSummary,
+  deleteTask,
+  clearCompletedTasks,
+  updateTask,
+};
